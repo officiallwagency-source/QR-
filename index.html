@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dukaan QR – UPI QR Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#0c3a38; --bg2:#08292a; --marigold:#ffb627; --pink:#ff4d79; --paper:#fffaf0; --ink:#1b2a2a;
+  --font:'Baloo 2','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+body{font-family:var(--font);color:var(--paper);min-height:100vh;background:linear-gradient(160deg,var(--bg),var(--bg2));overflow-x:hidden;padding:20px 16px 60px}
+.blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:.35;z-index:0;animation:float 14s ease-in-out infinite}
+.b1{width:300px;height:300px;background:var(--marigold);top:-80px;left:-80px}
+.b2{width:260px;height:260px;background:var(--pink);bottom:-60px;right:-60px;animation-delay:-6s}
+@keyframes float{50%{transform:translate(40px,60px) scale(1.15)}}
+main{position:relative;z-index:1;max-width:460px;margin:0 auto}
+header{text-align:center;padding:18px 0 22px;animation:drop .9s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes drop{from{opacity:0;transform:translateY(-40px) scale(.9)}}
+header h1{font-size:2.3rem;font-weight:800;line-height:1.1;letter-spacing:.5px}
+header h1 span{color:var(--marigold)}
+header p{opacity:.8;margin-top:4px}
+.panel{background:rgba(255,250,240,.08);border:1px solid rgba(255,250,240,.18);border-radius:22px;padding:20px;backdrop-filter:blur(8px)}
+label{display:block;font-weight:700;margin:14px 0 6px;font-size:.95rem}
+label:first-child{margin-top:0}
+input{width:100%;padding:13px 15px;border-radius:14px;border:2px solid transparent;background:var(--paper);color:var(--ink);font:600 1rem var(--font);outline:none;transition:.25s}
+input:focus{border-color:var(--marigold);box-shadow:0 0 0 4px rgba(255,182,39,.3)}
+input.bad{border-color:var(--pink);animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:7px 13px;border-radius:30px;border:2px solid rgba(255,250,240,.3);background:transparent;color:var(--paper);font:600 .9rem var(--font);cursor:pointer;transition:.2s}
+.chip:hover{transform:translateY(-3px) rotate(-2deg)}
+.chip.on{background:var(--marigold);color:var(--ink);border-color:var(--marigold);transform:scale(1.08)}
+.hint{font-size:.8rem;opacity:.7;margin-top:5px}
+#err{color:#ffd0da;font-weight:700;min-height:22px;margin-top:10px}
+button.go{width:100%;margin-top:8px;padding:14px;border:0;border-radius:16px;background:linear-gradient(90deg,var(--marigold),var(--pink));color:#2a1200;font:800 1.2rem var(--font);cursor:pointer;position:relative;overflow:hidden;transition:transform .2s}
+button.go:hover{transform:scale(1.03)}
+button.go:active{transform:scale(.96)}
+button.go::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:rgba(255,255,255,.5);transform:skewX(-20deg);animation:shine 2.6s infinite}
+@keyframes shine{to{left:130%}}
+#result{display:none;margin-top:22px;perspective:900px}
+#result.show{display:block}
+.card{background:var(--paper);color:var(--ink);border-radius:26px;padding:24px 20px;text-align:center;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.45);animation:flip .9s cubic-bezier(.2,1.2,.3,1) both}
+@keyframes flip{from{opacity:0;transform:rotateX(-80deg) scale(.7)}}
+.card h2{font-size:1.9rem;font-weight:800;line-height:1.1;color:#0c3a38}
+.card .type{display:inline-block;margin:6px 0 14px;padding:2px 14px;background:var(--marigold);border-radius:20px;font-weight:700}
+.qrwrap{position:relative;display:inline-block;padding:14px;background:#fff;border-radius:18px;border:3px dashed var(--bg)}
+#qr canvas,#qr img{display:block;width:230px!important;height:230px!important}
+.scan{position:absolute;left:10px;right:10px;height:4px;background:var(--pink);box-shadow:0 0 14px 4px var(--pink);border-radius:4px;animation:scan 2s ease-in-out 3}
+@keyframes scan{0%,100%{top:12px}50%{top:calc(100% - 16px)}}
+.card .upi{margin-top:12px;font-weight:700;word-break:break-all}
+.card .pay{opacity:.75;font-size:.9rem}
+.amt{font-size:1.4rem;font-weight:800;color:var(--pink)}
+.actions{display:flex;gap:10px;margin-top:16px}
+.actions button{flex:1;padding:11px;border-radius:14px;border:2px solid var(--bg);background:transparent;color:var(--bg);font:700 1rem var(--font);cursor:pointer;transition:.2s}
+.actions button:hover{background:var(--bg);color:var(--paper);transform:translateY(-3px)}
+.conf{position:fixed;top:-20px;width:10px;height:14px;z-index:9;pointer-events:none;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.8}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div>
+<main>
+  <header>
+    <h1>Dukaan <span>QR</span></h1>
+    <p>Apni dukaan ka UPI QR code, 10 second mein</p>
+  </header>
+
+  <section class="panel">
+    <label for="upi">Aapki UPI ID</label>
+    <input id="upi" placeholder="jaise: 9876543210@ybl" autocomplete="off" inputmode="email">
+
+    <label for="shop">Dukaan ka naam</label>
+    <input id="shop" placeholder="jaise: Sharma General Store" maxlength="40">
+
+    <label>Kis cheez ki dukaan hai?</label>
+    <div class="chips" id="chips"></div>
+    <input id="other" placeholder="Apni dukaan ka type likhein" style="display:none;margin-top:10px" maxlength="30">
+
+    <label for="amt">Amount (zaroori nahi)</label>
+    <input id="amt" type="number" min="1" placeholder="khali chhodo to customer khud dalega" inputmode="decimal">
+    <div class="hint">Amount dalne par QR scan karte hi wahi amount aayega.</div>
+
+    <div id="err"></div>
+    <button class="go" id="gen">QR Code Banao</button>
+  </section>
+
+  <section id="result">
+    <div class="card" id="card">
+      <h2 id="cName"></h2>
+      <div class="type" id="cType"></div><br>
+      <div class="qrwrap"><div id="qr"></div><div class="scan"></div></div>
+      <div class="amt" id="cAmt"></div>
+      <div class="upi" id="cUpi"></div>
+      <div class="pay">Scan karein aur kisi bhi UPI app se pay karein</div>
+      <div class="actions">
+        <button id="dl">Download</button>
+        <button id="pr">Print</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const types=[["🛒","Kirana Store"],["☕","Chai & Nashta"],["💊","Medical Store"],["👕","Kapde ki Dukaan"],["📱","Mobile Shop"],["🥦","Sabzi & Fruits"],["🍛","Restaurant"],["🥛","Dairy"],["✨","Dusra"]];
+let sel=types[0], qrObj=null;
+const $=id=>document.getElementById(id);
+
+// chips
+types.forEach((t,i)=>{
+  const b=document.createElement('button');
+  b.className='chip'+(i===0?' on':'');
+  b.textContent=t[0]+' '+t[1];
+  b.onclick=()=>{
+    sel=t;
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+    b.classList.add('on');
+    $('other').style.display=(i===types.length-1)?'block':'none';
+  };
+  $('chips').appendChild(b);
+});
+
+function fail(el,msg){
+  $('err').textContent=msg;
+  el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); el.focus();
+}
+
+function confetti(){
+  const cols=['#ffb627','#ff4d79','#fffaf0','#3ddc97'];
+  for(let i=0;i<60;i++){
+    const c=document.createElement('div');
+    c.className='conf';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=cols[i%4];
+    c.style.animationDuration=(1.8+Math.random()*2)+'s';
+    c.style.animationDelay=(Math.random()*.4)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),4500);
+  }
+}
+
+$('gen').onclick=()=>{
+  document.querySelectorAll('input').forEach(i=>i.classList.remove('bad'));
+  $('err').textContent='';
+  const upi=$('upi').value.trim();
+  const shop=$('shop').value.trim();
+  const amt=$('amt').value.trim();
+  const typeName=(sel===types[types.length-1])?($('other').value.trim()||'Dukaan'):sel[1];
+
+  if(!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upi)) return fail($('upi'),'UPI ID sahi nahi hai. Format: naam@bank');
+  if(!shop) return fail($('shop'),'Dukaan ka naam likhein.');
+  if(amt && !(parseFloat(amt)>0)) return fail($('amt'),'Amount sahi nahi hai.');
+
+  let link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(shop)+'&cu=INR';
+  if(amt) link+='&am='+parseFloat(amt).toFixed(2);
+
+  $('qr').innerHTML='';
+  qrObj=new QRCode($('qr'),{text:link,width:460,height:460,colorDark:'#0c2b2a',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+
+  $('cName').textContent=shop;
+  $('cType').textContent=(sel[0]+' '+typeName);
+  $('cUpi').textContent=upi;
+  $('cAmt').textContent=amt?('₹ '+parseFloat(amt)):'';
+
+  const r=$('result');
+  r.classList.remove('show'); void r.offsetWidth; r.classList.add('show');
+  const card=$('card'); card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  const sc=document.querySelector('.scan'); sc.style.animation='none'; void sc.offsetWidth; sc.style.animation='';
+  confetti();
+  setTimeout(()=>r.scrollIntoView({behavior:'smooth',block:'center'}),150);
+};
+
+// Download as PNG card
+$('dl').onclick=()=>{
+  const src=$('qr').querySelector('canvas'); if(!src) return;
+  const W=700,H=900,c=document.createElement('canvas'); c.width=W;c.height=H;
+  const x=c.getContext('2d');
+  x.fillStyle='#fffaf0'; x.fillRect(0,0,W,H);
+  x.fillStyle='#0c3a38'; x.fillRect(0,0,W,14); x.fillRect(0,H-14,W,14);
+  x.textAlign='center';
+  x.fillStyle='#0c3a38'; x.font='800 54px "Baloo 2",sans-serif';
+  x.fillText($('cName').textContent,W/2,100,W-60);
+  x.fillStyle='#ffb627'; x.fillRect(W/2-170,125,340,52);
+  x.fillStyle='#1b2a2a'; x.font='700 28px "Baloo 2",sans-serif';
+  x.fillText($('cType').textContent,W/2,162,320);
+  x.fillStyle='#fff'; x.fillRect(100,210,500,500);
+  x.drawImage(src,120,230,460,460);
+  x.fillStyle='#ff4d79'; x.font='800 40px "Baloo 2",sans-serif';
+  if($('cAmt').textContent) x.fillText($('cAmt').textContent,W/2,770);
+  x.fillStyle='#1b2a2a'; x.font='700 30px "Baloo 2",sans-serif';
+  x.fillText($('cUpi').textContent,W/2,820,W-60);
+  x.globalAlpha=.7; x.font='600 24px "Baloo 2",sans-serif';
+  x.fillText('Scan karein aur kisi bhi UPI app se pay karein',W/2,860,W-40);
+  const a=document.createElement('a');
+  a.download=($('cName').textContent.replace(/\s+/g,'-')||'upi')+'-QR.png';
+  a.href=c.toDataURL('image/png'); a.click();
+};
+
+$('pr').onclick=()=>window.print();
+</script>
+</body>
+</html>
